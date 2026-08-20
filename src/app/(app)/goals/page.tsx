@@ -67,6 +67,7 @@ export default function GoalsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [transferGoal, setTransferGoal] = useState<(Goal & { balance: number }) | null>(null);
   const [withdrawGoal, setWithdrawGoal] = useState<(Goal & { balance: number }) | null>(null);
   const [deleteGoal, setDeleteGoal] = useState<Goal | null>(null);
 
@@ -252,6 +253,7 @@ export default function GoalsPage() {
                 goal={goal}
                 balance={balance}
                 transactions={txs}
+                onTransfer={() => setTransferGoal({ ...goal, balance })}
                 onEdit={() => {
                   setEditingGoal(goal);
                   setIsFormOpen(true);
@@ -279,6 +281,24 @@ export default function GoalsPage() {
         initialData={editingGoal ?? undefined}
         onSubmit={editingGoal ? handleUpdate : handleCreate}
       />
+
+      {transferGoal && (
+        <GoalTransferModal
+          open={!!transferGoal}
+          onOpenChange={(open) => !open && setTransferGoal(null)}
+          mode="transfer"
+          lockedGoal={transferGoal}
+          maxAmount={totalAccountBalance}
+          defaultMonthYear={currentMonthYear}
+          goals={goalsWithBalance}
+          envelopes={activeEnvelopes}
+          onTransfer={async (params) => {
+            await goalTransferMutation.mutateAsync(params);
+            setTransferGoal(null);
+          }}
+          onWithdraw={async () => {}}
+        />
+      )}
 
       {withdrawGoal && (
         <GoalTransferModal

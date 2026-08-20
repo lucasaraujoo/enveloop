@@ -12,13 +12,23 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Loader2,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface GoalCardProps {
   goal: Goal;
   balance: number;
   transactions: Transaction[]; // All transactions for this goal
+  onTransfer: () => void;
   onEdit: () => void;
   onWithdraw: () => void;
   onDelete: () => void;
@@ -44,6 +54,7 @@ export function GoalCard({
   goal,
   balance,
   transactions,
+  onTransfer,
   onEdit,
   onWithdraw,
   onDelete,
@@ -69,7 +80,7 @@ export function GoalCard({
   return (
     <div className="rounded-xl border bg-card shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
       {/* ── Header ── */}
-      <div className="p-5 pb-3">
+      <div className="p-2 pb-3">
         <div className="flex items-start justify-between gap-3 mb-4">
           {/* Icon + Name */}
           <div className="flex items-center gap-3 min-w-0">
@@ -89,11 +100,11 @@ export function GoalCard({
             {goal.active !== false ? (
               <>
                 <button
-                  onClick={onEdit}
-                  title="Editar objetivo"
-                  className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  onClick={onTransfer}
+                  title="Transferir para objetivo"
+                  className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:text-violet-600 hover:bg-violet-500/10 transition-colors"
                 >
-                  <Pencil className="h-4 w-4" />
+                  <ArrowDownToLine className="h-4 w-4" />
                 </button>
                 <button
                   onClick={onWithdraw}
@@ -101,15 +112,23 @@ export function GoalCard({
                   disabled={balance <= 0}
                   className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <TrendingDown className="h-4 w-4" />
+                  <ArrowUpFromLine className="h-4 w-4" />
                 </button>
-                <button
-                  onClick={onDelete}
-                  title="Excluir objetivo"
-                  className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors outline-none">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onEdit} className="gap-2 cursor-pointer">
+                      <Pencil className="h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onDelete} className="gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               onRestore && (
@@ -180,51 +199,35 @@ export function GoalCard({
             return (
               <div
                 key={tx.id}
-                className="flex items-center gap-3 px-5 py-2.5 hover:bg-muted/20 transition-colors"
+                className="flex items-center gap-2.5 px-5 py-2 hover:bg-muted/20 transition-colors"
               >
                 {/* Icon */}
                 <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${isIn ? "bg-red-500/10" : "bg-emerald-500/10"
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${isIn ? "bg-violet-500/10" : "bg-emerald-500/10"
                     }`}
                 >
                   {isIn ? (
-                    <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+                    <ArrowDownRight className="h-3 w-3 text-violet-500" />
                   ) : (
-                    <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+                    <ArrowUpRight className="h-3 w-3 text-emerald-500" />
                   )}
                 </div>
 
                 {/* Description + date */}
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-sm font-medium truncate">{tx.description}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs font-medium truncate">{tx.description}</span>
+                  <span className="text-[10px] text-muted-foreground">
                     {formatDate(tx.date)} · {tx.referenceMonthYear}
                   </span>
                 </div>
 
                 {/* Amount */}
                 <span
-                  className={`text-sm font-semibold tabular-nums shrink-0 ${isIn ? "text-red-500" : "text-emerald-500"
+                  className={`text-xs font-semibold tabular-nums shrink-0 ${isIn ? "text-violet-500" : "text-emerald-500"
                     }`}
                 >
-                  {isIn ? "-" : "+"} {formatCurrency(tx.amount)}
+                  {formatCurrency(tx.amount)}
                 </span>
-
-                {/* Delete button */}
-                {goal.active !== false && (
-                  <button
-                    onClick={() => onDeleteTransaction(tx.id!)}
-                    disabled={isDeletingTx}
-                    title="Remover lançamento"
-                    className="inline-flex items-center justify-center rounded-md h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                  >
-                    {isDeletingTx ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                )}
               </div>
             );
           })}

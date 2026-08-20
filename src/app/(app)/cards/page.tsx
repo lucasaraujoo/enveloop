@@ -124,7 +124,7 @@ export default function CardsPage() {
               <div className="flex items-center gap-2 text-muted-foreground">
                 <CreditCard className="h-4 w-4" />
                 <span className="text-sm">
-                  {card.lastDigits ? `•••• ${card.lastDigits}` : "Sem dígitos informados"}
+                  {card.lastDigits ? `•••• ${card.lastDigits}` : "----"}
                 </span>
               </div>
             </CardHeader>

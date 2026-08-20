@@ -285,8 +285,10 @@ Saldos principais são atualizados de forma incremental para garantir performanc
 | **Saldo Geral** | `Σ(balance)` de todas as contas ativas. |
 | **Consumo de envelope (mês Y)** | `Σ(expense.amount) + Σ(card_purchase.amount) + Σ(goal_transfer.amount where envelopeId = X)` onde `referenceMonthYear = Y` (Exclui estornados e cancelados). |
 | **Faturas pendentes (cartão X)** | Armazenado no campo `pendingBills` no cartão e atualizado incrementalmente. |
-| **Saldo livre do mês Y** | `Σ(income) + Σ(month_transfer_in) + Σ(goal_withdraw) - Σ(month_transfer_out) - Σ(goal_transfer) - Σ(limites dos envelopes)` onde `referenceMonthYear = Y` |
-| **Total planejado (mês Y)** | `Σ(limites dos envelopes do mês Y)` (override se existir, senão `defaultAmount`) |
+| **Total planejado (mês Y)** | `Σ(limites dos envelopes do mês Y)` (override se existir, senão `defaultAmount`). Fica vermelho na UI se ultrapassar as Receitas. |
+| **Receitas (mês Y)** | `Σ(income.amount) + Σ(month_transfer_in.amount) + Σ(goal_withdraw.amount)` onde `referenceMonthYear = Y`. |
+| **Despesas (mês Y)** | `Σ(expense.amount) + Σ(month_transfer_out.amount) + Σ(goal_transfer.amount) + Σ(bill_payment.amount) + Σ(card_purchase.amount onde status = 'pending')`. *Todos agrupados onde `referenceMonthYear = Y`* (Exclui estornados/cancelados). |
+| **Saldo do mês (mês Y)** | `Receitas (mês Y) - Despesas (mês Y)`. Exibe status visual de Sobra (positivo) ou Déficit (negativo). |
 | **Saldo do objetivo X** | `Σ(goal_transfer.amount where goalId = X) - Σ(goal_withdraw.amount where goalId = X)` |
 | **Total em objetivos** | `Σ(saldo de cada objetivo ativo)` — exibido no topo da tela de Objetivos. Se maior que Saldo Geral, exibe alerta. |
 

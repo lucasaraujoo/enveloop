@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useDashboard } from "@/features/dashboard/hooks/useDashboard";
+import { useGoals } from "@/features/goals/hooks/useGoals";
 import { GlobalIndicators } from "@/features/dashboard/components/GlobalIndicators";
 import { MonthGrid } from "@/features/dashboard/components/MonthGrid";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -23,6 +24,8 @@ export default function DashboardPage() {
     goToToday,
     updateLimitMutation,
   } = useDashboard(visibleCount);
+
+  const { totalInGoals, goalsQuery } = useGoals();
 
   return (
     <div className="space-y-6">
@@ -63,6 +66,8 @@ export default function DashboardPage() {
           <GlobalIndicators
             totalBalance={data.totalBalance}
             totalPendingBills={data.totalPendingBills}
+            totalInGoals={totalInGoals}
+            isGoalsLoading={goalsQuery.isLoading}
           />
 
           {/* Planning grid */}

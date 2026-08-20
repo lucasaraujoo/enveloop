@@ -1,4 +1,4 @@
-# Etapa 5 — Cadastros básicos
+# Etapa 4 — Cadastros básicos
 
 Implementar:
 
@@ -6,6 +6,7 @@ Implementar:
 - Cartões
 - Categorias
 - Envelopes padrão
+- Objetivos (Metas)
 
 Cada módulo deverá possuir:
 

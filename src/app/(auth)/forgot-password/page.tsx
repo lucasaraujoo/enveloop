@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { FirebaseError } from "firebase/app";
+import { getFirebaseErrorMessage } from "@/utils/firebase-errors";
 
 const formSchema = z.object({
   email: z.string().email({ message: "E-mail inválido" }),
@@ -52,7 +53,7 @@ export default function ForgotPasswordPage() {
       setIsSent(true);
     } catch (error) {
       if (error instanceof FirebaseError) {
-        toast.error("Erro ao recuperar senha: " + error.message);
+        toast.error(getFirebaseErrorMessage(error.code));
       } else {
         toast.error("Ocorreu um erro inesperado.");
       }

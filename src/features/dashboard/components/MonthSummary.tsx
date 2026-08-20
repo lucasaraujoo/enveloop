@@ -96,7 +96,7 @@ export function MonthSummary({ months }: MonthSummaryProps) {
             className="text-emerald-600 dark:text-emerald-400"
           />
           <SummaryRow
-            label="Saídas"
+            label="Despesas"
             months={months}
             getValue={(m) => m.totalExpenses}
             className={(m) => m.totalExpenses > m.totalIncome ? "text-destructive" : "text-orange-600 dark:text-orange-500"}

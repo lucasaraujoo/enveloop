@@ -1,4 +1,4 @@
-# Etapa 4 — Autenticação
+# Etapa 3 — Autenticação
 
 Implementar:
 

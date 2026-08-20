@@ -139,20 +139,31 @@ export function AccountForm({ initialData, inactiveAccounts = [], onSuccess }: A
           <FormField
             control={form.control}
             name="initialBalance"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Saldo Inicial (R$)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    step="0.01" 
-                    {...field} 
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              const displayValue = new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(field.value || 0);
+
+              return (
+                <FormItem>
+                  <FormLabel>Saldo Inicial (R$)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      value={displayValue}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "");
+                        const numericValue = Number(digits) / 100;
+                        field.onChange(numericValue);
+                      }}
+                      onFocus={(e) => e.target.select()}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
           <FormField
             control={form.control}

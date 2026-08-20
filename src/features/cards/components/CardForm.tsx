@@ -72,10 +72,10 @@ export function CardForm({ initialData, inactiveCards = [], onSuccess }: CardFor
   const isLoading = createMutation.isPending || updateMutation.isPending || restoreMutation.isPending;
 
   async function onSubmit(values: z.infer<typeof cardSchema>) {
-    const dataToSave = {
-      ...values,
-      lastDigits: values.lastDigits || undefined,
-    };
+    const dataToSave: any = { ...values };
+    if (!dataToSave.lastDigits) dataToSave.lastDigits = null;
+    if (dataToSave.closingDay === undefined) dataToSave.closingDay = null;
+    if (dataToSave.dueDay === undefined) dataToSave.dueDay = null;
 
     if (initialData?.id) {
       try {
@@ -120,10 +120,10 @@ export function CardForm({ initialData, inactiveCards = [], onSuccess }: CardFor
     if (!duplicateCard || !pendingValues) return;
     
     try {
-      const dataToSave = {
-        ...pendingValues,
-        lastDigits: pendingValues.lastDigits || undefined,
-      };
+      const dataToSave: any = { ...pendingValues };
+      if (!dataToSave.lastDigits) dataToSave.lastDigits = null;
+      if (dataToSave.closingDay === undefined) dataToSave.closingDay = null;
+      if (dataToSave.dueDay === undefined) dataToSave.dueDay = null;
 
       await updateMutation.mutateAsync({
         id: duplicateCard.id!,

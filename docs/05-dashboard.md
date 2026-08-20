@@ -1,4 +1,4 @@
-# Etapa 6 — Dashboard
+# Etapa 5 — Dashboard
 
 A Dashboard será a principal tela do sistema. Deverá se basear no que foi definido no PRD, porém de forma mais rica e completa. O usuário deve sentir que está olhando para o seu planejamento financeiro e ter uma noção clara de como anda sua vida financeira. Para isso, a dashboard deve priorizar os elementos visuais e interativos, sempre que possível, junto com responsividade priorizando dispositivos móveis. Evitar uso de tabelas, priorizando gráficos e cartões, mas manter a organização em forma de linhas e colunas. 
 
@@ -12,8 +12,10 @@ Implementar:
 - edição do limite do envelope para um mês específico;
 - consumo por envelope no mês;
 - saldo geral;
-- saldo líquido;
-- saldo livre (sem vínculos com envelopes);
+- saldo líquido (Receitas - Despesas);
+- total de faturas pendentes;
+- total em objetivos;
+- totalizadores mensais por mês (Total Planejado, Receitas, Despesas, Saldo);
 - barras de utilização;
 - resumo mensal.
 

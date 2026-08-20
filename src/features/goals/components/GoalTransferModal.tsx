@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Target, TrendingDown } from "lucide-react";
+import { Loader2, Target, ArrowUpFromLine } from "lucide-react";
 import { Goal } from "@/types/goal.types";
 import { Envelope } from "@/types/envelope.types";
 
@@ -33,6 +33,7 @@ interface GoalTransferModalProps {
   targetSaldo?: number;
   // For "withdraw": this goal is locked and pre-filled
   lockedGoal?: Goal & { balance: number };
+  maxAmount?: number;
   goals?: (Goal & { balance: number })[]; // Active goals with current balance
   envelopes?: Envelope[];
   onTransfer: (params: {
@@ -82,6 +83,7 @@ export function GoalTransferModal({
   defaultMonthYear,
   targetSaldo,
   lockedGoal,
+  maxAmount,
   goals = [],
   envelopes = [],
   onTransfer,
@@ -98,9 +100,9 @@ export function GoalTransferModal({
   const isTransfer = mode === "transfer";
   const activeGoal = isTransfer ? goals.find((g) => g.id === selectedGoalId) : lockedGoal;
   
-  const maxAmount = mode === "withdraw" 
+  const effectiveMaxAmount = mode === "withdraw" 
     ? lockedGoal?.balance 
-    : (targetSaldo !== undefined ? targetSaldo : undefined);
+    : (maxAmount !== undefined ? maxAmount : targetSaldo);
 
   // Initialize from defaults
   useEffect(() => {
@@ -124,7 +126,7 @@ export function GoalTransferModal({
         setDescription("Saque de objetivo");
       } 
       
-      if (mode === "withdraw" && lockedGoal) {
+      if (lockedGoal) {
         setSelectedGoalId(lockedGoal.id!);
       } else {
         setSelectedGoalId(goals[0]?.id ?? "");
@@ -196,7 +198,7 @@ export function GoalTransferModal({
               </>
             ) : (
               <>
-                <TrendingDown className="h-5 w-5 text-emerald-500" />
+                <ArrowUpFromLine className="h-5 w-5 text-emerald-500" />
                 Sacar do Objetivo
               </>
             )}
@@ -207,7 +209,7 @@ export function GoalTransferModal({
           {/* Objetivo */}
           <div className="grid gap-2">
             <Label>Objetivo</Label>
-            {mode === "withdraw" && lockedGoal ? (
+            {lockedGoal ? (
               <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm">
                 <span className="font-medium">{lockedGoal.name}</span>
                 <span className="text-muted-foreground text-xs">
@@ -270,9 +272,9 @@ export function GoalTransferModal({
           <div className="grid gap-2">
             <Label>
               Valor (R$)
-              {maxAmount !== undefined && (
+              {effectiveMaxAmount !== undefined && (
                 <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  máx: {formatCurrency(maxAmount)}
+                  máx: {formatCurrency(effectiveMaxAmount)}
                 </span>
               )}
             </Label>
@@ -282,7 +284,7 @@ export function GoalTransferModal({
               value={formatCurrency(amount)}
               onChange={(e) => {
                 const v = parseCurrency(e.target.value);
-                setAmount(maxAmount !== undefined && maxAmount > 0 ? Math.min(v, maxAmount) : v);
+                setAmount(effectiveMaxAmount !== undefined && effectiveMaxAmount > 0 ? Math.min(v, effectiveMaxAmount) : v);
               }}
               onFocus={(e) => e.target.select()}
               autoFocus

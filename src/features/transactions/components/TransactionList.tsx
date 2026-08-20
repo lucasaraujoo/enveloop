@@ -31,6 +31,7 @@ import { transactionService } from "@/services/transaction.service";
 
 interface TransactionListProps {
   monthYears: string[];
+  isFiltersOpen?: boolean;
 }
 
 function formatCurrency(value: number) {
@@ -52,7 +53,7 @@ const TYPE_LABELS: Record<string, string> = {
   goal_withdraw: "Saque de Objetivo",
 };
 
-export function TransactionList({ monthYears }: TransactionListProps) {
+export function TransactionList({ monthYears, isFiltersOpen = false }: TransactionListProps) {
   const { data: transactions, isLoading, isError, deleteMutation, reverseMutation, reverseInstallmentMutation, deleteInstallmentMutation } = useTransactions(monthYears);
   const { user } = useAuth();
   const { accountsQuery } = useAccounts();
@@ -70,7 +71,6 @@ export function TransactionList({ monthYears }: TransactionListProps) {
   const [filterCardId, setFilterCardId] = useState<string>("all");
   const [filterEnvelopeId, setFilterEnvelopeId] = useState<string>("all");
   const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
-  const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
 
   // Extract unique goals from transactions for display
   const goalIds = [...new Set(
@@ -157,27 +157,71 @@ export function TransactionList({ monthYears }: TransactionListProps) {
     return categories?.find((c) => c.id === categoryId)?.name;
   };
 
+  // Cálculos dos totalizadores baseados no array original completo do mês
+  const totalReceitas = (transactions ?? [])
+    .filter((t) => t.type === "income" || t.type === "month_transfer_in" || t.type === "goal_withdraw")
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const totalDespesas = (transactions ?? [])
+    .filter((t) => {
+      if (t.status === "reversed" || t.status === "cancelled") return false;
+      if (t.type === "expense" || t.type === "bill_payment" || t.type === "month_transfer_out" || t.type === "goal_transfer") return true;
+      if (t.type === "card_purchase" && t.status === "pending") return true;
+      return false;
+    })
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const totalReservado = (transactions ?? [])
+    .filter((t) => {
+      if (t.status === "reversed" || t.status === "cancelled") return false;
+      if (t.type === "goal_transfer") return true;
+      if (t.type === "card_purchase" && t.status === "pending") return true;
+      return false;
+    })
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const saldo = totalReceitas - totalDespesas;
+
   return (
     <div className="space-y-4">
-      {/* Botão Filtros */}
-      <div className="flex justify-start">
-        <Button 
-          variant="outline" 
-          onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-          className="gap-2"
-        >
-          <Filter className="h-4 w-4" />
-          Filtros
-        </Button>
-      </div>
+      {/* Cards de Resumo */}
+      {!isFiltersOpen && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+          <div className="flex flex-col justify-center p-2 sm:p-3 rounded-lg border bg-card">
+            <span className="text-[10px] font-medium text-muted-foreground leading-tight">Receitas</span>
+            <span className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 leading-tight mt-0.5">
+              {formatCurrency(totalReceitas)}
+            </span>
+          </div>
+          <div className="flex flex-col justify-center p-2 sm:p-3 rounded-lg border bg-card">
+            <span className="text-[10px] font-medium text-muted-foreground leading-tight">Despesas</span>
+            <span className="text-base sm:text-lg font-bold text-orange-600 dark:text-orange-500 leading-tight mt-0.5">
+              {formatCurrency(totalDespesas)}
+            </span>
+          </div>
+          <div className="flex flex-col justify-center p-2 sm:p-3 rounded-lg border bg-card">
+            <span className="text-[10px] font-medium text-muted-foreground leading-tight">Reservado</span>
+            <span className="text-base sm:text-lg font-bold text-amber-500 leading-tight mt-0.5">
+              {formatCurrency(totalReservado)}
+            </span>
+          </div>
+          <div className="flex flex-col justify-center p-2 sm:p-3 rounded-lg border bg-card">
+            <span className="text-[10px] font-medium text-muted-foreground leading-tight">Saldo</span>
+            <span className={`text-base sm:text-lg font-bold leading-tight mt-0.5 ${saldo >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+              {formatCurrency(saldo)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Container de Filtros */}
       {isFiltersOpen && (
-        <div className="flex flex-wrap gap-2 p-4 rounded-md border bg-card/50">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 p-3 sm:p-4 rounded-md border bg-card/50 mb-2">
         {/* Tipo */}
-        <Select value={filterType} onValueChange={(val) => setFilterType(val || "all")}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue>
+        <div className="col-span-2 sm:col-span-1">
+          <Select value={filterType} onValueChange={(val) => setFilterType(val || "all")}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue>
               {TYPE_LABELS[filterType] ?? "Todos os tipos"}
             </SelectValue>
           </SelectTrigger>
@@ -192,13 +236,15 @@ export function TransactionList({ monthYears }: TransactionListProps) {
             <SelectItem value="goal_transfer">Transferência p/ Objetivo</SelectItem>
             <SelectItem value="goal_withdraw">Saque de Objetivo</SelectItem>
           </SelectContent>
-        </Select>
+          </Select>
+        </div>
 
         {/* Conta */}
         {(accounts?.length ?? 0) > 0 && (
-          <Select value={filterAccountId} onValueChange={(val) => setFilterAccountId(val || "all")}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue>
+          <div className="col-span-1">
+            <Select value={filterAccountId} onValueChange={(val) => setFilterAccountId(val || "all")}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue>
                 {filterAccountId === "all"
                   ? "Todas as contas"
                   : accounts?.find((a) => a.id === filterAccountId)?.name}
@@ -212,14 +258,16 @@ export function TransactionList({ monthYears }: TransactionListProps) {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+            </Select>
+          </div>
         )}
 
         {/* Cartão */}
         {(cards?.length ?? 0) > 0 && (
-          <Select value={filterCardId} onValueChange={(val) => setFilterCardId(val || "all")}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue>
+          <div className="col-span-1">
+            <Select value={filterCardId} onValueChange={(val) => setFilterCardId(val || "all")}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue>
                 {filterCardId === "all"
                   ? "Todos os cartões"
                   : cards?.find((c) => c.id === filterCardId)?.name}
@@ -233,14 +281,16 @@ export function TransactionList({ monthYears }: TransactionListProps) {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+            </Select>
+          </div>
         )}
 
         {/* Envelope */}
         {(envelopes?.length ?? 0) > 0 && (
-          <Select value={filterEnvelopeId} onValueChange={(val) => setFilterEnvelopeId(val || "all")}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue>
+          <div className="col-span-1">
+            <Select value={filterEnvelopeId} onValueChange={(val) => setFilterEnvelopeId(val || "all")}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue>
                 {filterEnvelopeId === "all"
                   ? "Todos os envelopes"
                   : envelopes?.find((e) => e.id === filterEnvelopeId)?.name}
@@ -254,14 +304,16 @@ export function TransactionList({ monthYears }: TransactionListProps) {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+            </Select>
+          </div>
         )}
 
         {/* Categoria */}
         {(categories?.length ?? 0) > 0 && (
-          <Select value={filterCategoryId} onValueChange={(val) => setFilterCategoryId(val || "all")}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue>
+          <div className="col-span-1">
+            <Select value={filterCategoryId} onValueChange={(val) => setFilterCategoryId(val || "all")}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue>
                 {filterCategoryId === "all"
                   ? "Todas as categorias"
                   : categories?.find((c) => c.id === filterCategoryId)?.name}
@@ -275,13 +327,14 @@ export function TransactionList({ monthYears }: TransactionListProps) {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+            </Select>
+          </div>
         )}
       </div>
       )}
 
       {/* Lista de Transações */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 pt-4 sm:pt-6 border-t border-border/50">
         {filteredTransactions.length === 0 ? (
           <div className="text-center p-12 text-muted-foreground border rounded-lg bg-card">
             Nenhum lançamento encontrado para este filtro.

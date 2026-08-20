@@ -1,4 +1,4 @@
-# Etapa 8 — Relatórios
+# Etapa 7 — Relatórios
 
 Implementar:
 
@@ -6,7 +6,8 @@ Relatórios Orçamentários
 
 - gastos por envelope;
 - gastos por categoria;
-- evolução dos envelopes.
+- evolução dos envelopes;
+- evolução dos objetivos.
 
 Relatórios Financeiros
 

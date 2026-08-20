@@ -318,12 +318,12 @@ O Saldo do mês representa o fluxo de caixa real projetado para aquele período,
 
 Fórmula:
 
-Saldo = Receitas do mês - Saídas do mês (Despesas, Transferências e Compras no Cartão Pendentes)
+Saldo = Receitas do mês - Despesas do mês (Despesas pagas, Transferências de saída, Pagamentos de Fatura e Compras no Cartão Pendentes)
 
 O saldo no mês indica a saúde orçamentária:
 - **Sobra (Positivo):** Pode ser transferido para o mês seguinte como um crédito para orçamentos futuros.
 - **Déficit (Negativo):** Pode ser compensado puxando saldo orçamentário de meses anteriores.
-- **Zerado:** As receitas cobriram perfeitamente as saídas.
+- **Zerado:** As receitas cobriram perfeitamente as despesas.
 
 ---
 
@@ -584,8 +584,8 @@ Abaixo da tabela deverão existir os resumos mensais:
 
 - **Total Planejado:** (Fica vermelho se os limites ultrapassarem a receita, mesmo havendo despesas)
 - **Receitas**
-- **Saídas:** (Inclui despesas, compras pendentes no cartão ou pagamentos de fatura e transferências de saída do mês)
-- **Saldo:** (Receitas - Saídas, exibindo status visual de Sobra ou Déficit com atalho direto para transferências)
+- **Despesas:** (Inclui despesas da conta, compras pendentes no cartão ou pagamentos de fatura e transferências de saída do mês)
+- **Saldo:** (Receitas - Despesas, exibindo status visual de Sobra ou Déficit com atalho direto para transferências)
 
 Ao clicar em uma célula deverá ser possível editar limite do envelope naquele mes.
 
@@ -744,9 +744,7 @@ Firestore
 
 Funcionalidades previstas para versões futuras:
 
-- Parcelamentos.
 - Lançamentos recorrentes.
-- Metas financeiras.
 - Dashboard anual.
 - Backup automático.
 - Compartilhamento entre usuários.

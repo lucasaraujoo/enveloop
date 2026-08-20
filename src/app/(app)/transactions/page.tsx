@@ -7,12 +7,13 @@ import { TransactionForm } from "@/features/transactions/components/TransactionF
 import { TransactionList } from "@/features/transactions/components/TransactionList";
 import { MonthTransferModal } from "@/features/transactions/components/MonthTransferModal";
 import { useTransactions } from "@/features/transactions/hooks/useTransactions";
-import { Plus, ArrowRightLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ArrowRightLeft, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 
 export default function TransactionsPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const month = currentDate.getMonth() + 1;
   const year = currentDate.getFullYear();
@@ -41,13 +42,31 @@ export default function TransactionsPage() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsTransferModalOpen(true)} className="gap-2">
-            <ArrowRightLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Transferência entre Meses</span>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+            className="gap-2 hidden sm:flex"
+            title="Filtros"
+          >
+            <Filter className="h-4 w-4" />
+            <span>Filtros</span>
           </Button>
-          <Button onClick={() => setIsTransactionModalOpen(true)} className="gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+            className="sm:hidden px-3"
+            title="Filtros"
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" onClick={() => setIsTransferModalOpen(true)} className="gap-2 px-3 sm:px-4">
+            <ArrowRightLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Transferência</span>
+          </Button>
+          <Button onClick={() => setIsTransactionModalOpen(true)} className="gap-2 px-3 sm:px-4">
             <Plus className="h-4 w-4" />
-            Novo Lançamento
+            <span className="hidden sm:inline">Novo Lançamento</span>
+            <span className="sm:hidden">Novo</span>
           </Button>
         </div>
       </div>
@@ -64,7 +83,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* Transactions List */}
-      <TransactionList monthYears={[monthYearStr]} />
+      <TransactionList monthYears={[monthYearStr]} isFiltersOpen={isFiltersOpen} />
 
       {/* Transaction Form Modal */}
       <Dialog open={isTransactionModalOpen} onOpenChange={setIsTransactionModalOpen}>

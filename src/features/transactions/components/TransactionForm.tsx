@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TransactionFormValues, transactionSchema } from "../schemas/transaction.schema";
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
+import { findBestMatch } from "@/utils/fuzzy-match";
 import { transactionService } from "@/services/transaction.service";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -91,6 +92,8 @@ export function TransactionForm({
   const { user } = useAuth();
   const [preCalculatedAmount, setPreCalculatedAmount] = useState<number | null>(null);
   const [confirmPaymentData, setConfirmPaymentData] = useState<TransactionFormValues | null>(null);
+  const [envelopeStatus, setEnvelopeStatus] = useState<"neutral" | "auto" | "manual">("neutral");
+  const [categoryStatus, setCategoryStatus] = useState<"neutral" | "auto" | "manual">("neutral");
 
   const selectedType = form.watch("type");
   const selectedReferenceMonthYear = form.watch("referenceMonthYear");
@@ -112,9 +115,10 @@ export function TransactionForm({
   useEffect(() => {
     if (monthStatus === "manual" || !selectedDate) return;
 
-    let baseRefDate = new Date(selectedDate);
-    let baseInvDate = new Date(selectedDate);
-    baseInvDate.setMonth(baseInvDate.getMonth() + 1);
+    // Fix: set day=1 before month arithmetic to avoid JS overflow
+    // (e.g. Aug 31 + 1 month = Sep 31 → overflows to Oct 1)
+    let baseRefDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    let baseInvDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
 
     if (selectedType === "card_purchase" && selectedCardId) {
       const card = cards.find((c) => c.id === selectedCardId);
@@ -158,8 +162,20 @@ export function TransactionForm({
   const monthSelectClass = monthStatus === "manual"
     ? "flex-1 border-blue-500/40 bg-blue-500/10 dark:bg-blue-500/10 transition-colors"
     : monthStatus === "auto"
-    ? "flex-1 border-amber-500/50 bg-amber-500/10 dark:bg-amber-500/10 transition-colors"
-    : "flex-1 transition-colors";
+      ? "flex-1 border-amber-500/50 bg-amber-500/10 dark:bg-amber-500/10 transition-colors"
+      : "flex-1 transition-colors";
+
+  const envelopeSelectClass = envelopeStatus === "manual"
+    ? "border-blue-500/40 bg-blue-500/10 dark:bg-blue-500/10 transition-colors"
+    : envelopeStatus === "auto"
+      ? "border-amber-500/50 bg-amber-500/10 dark:bg-amber-500/10 transition-colors"
+      : "transition-colors";
+
+  const categorySelectClass = categoryStatus === "manual"
+    ? "border-blue-500/40 bg-blue-500/10 dark:bg-blue-500/10 transition-colors"
+    : categoryStatus === "auto"
+      ? "border-amber-500/50 bg-amber-500/10 dark:bg-amber-500/10 transition-colors"
+      : "transition-colors";
 
   const { data: billInfo, isFetching: isLoadingBillInfo } = useQuery({
     queryKey: ["billPaymentInfo", selectedType, selectedCardId, selectedInvoiceMonthYear],
@@ -189,10 +205,10 @@ export function TransactionForm({
           const [invoiceYear, invoiceMonth] = (selectedInvoiceMonthYear || "").split("-").map(Number);
           const monthNameRaw = new Date(2000, (invoiceMonth || 1) - 1, 1).toLocaleString("pt-BR", { month: "long" });
           const monthName = monthNameRaw.charAt(0).toUpperCase() + monthNameRaw.slice(1);
-          
+
           const descBase = `Pagamento de fatura de ${monthName}`;
-          
-          const desc = billInfo.residual !== 0 
+
+          const desc = billInfo.residual !== 0
             ? `${descBase} (inclui ${billInfo.residual > 0 ? 'resíduo' : 'crédito'} de ${formatter.format(Math.abs(billInfo.residual))})`
             : descBase;
           form.setValue("description", desc);
@@ -209,6 +225,37 @@ export function TransactionForm({
   const showCard = selectedType === "card_purchase" || selectedType === "bill_payment";
   // Types that show envelope + category
   const showEnvelope = selectedType === "expense" || selectedType === "card_purchase";
+
+  // Auto-fill envelope and category based on description similarity
+  const handleDescriptionBlur = (description: string) => {
+    if (selectedType === "bill_payment" || !showEnvelope) return;
+    if (envelopeStatus === "manual" && categoryStatus === "manual") return;
+    if (!description.trim()) return;
+
+    if (envelopeStatus !== "manual") {
+      const bestEnvelope = findBestMatch(
+        description,
+        activeEnvelopes,
+        (e) => e.name
+      );
+      if (bestEnvelope?.id) {
+        form.setValue("envelopeId", bestEnvelope.id);
+        setEnvelopeStatus("auto");
+      }
+    }
+
+    if (categoryStatus !== "manual") {
+      const bestCategory = findBestMatch(
+        description,
+        activeCategories,
+        (c) => c.name
+      );
+      if (bestCategory?.id) {
+        form.setValue("categoryId", bestCategory.id);
+        setCategoryStatus("auto");
+      }
+    }
+  };
 
   const processSubmit = async (values: TransactionFormValues) => {
     try {
@@ -234,6 +281,8 @@ export function TransactionForm({
         paymentMethod: "pix",
         installments: 1,
       });
+      setEnvelopeStatus("neutral");
+      setCategoryStatus("neutral");
       setConfirmPaymentData(null);
     } catch (error) {
       console.error(error);
@@ -280,6 +329,8 @@ export function TransactionForm({
               } else {
                 form.setValue("paymentMethod", undefined);
               }
+              setEnvelopeStatus("neutral");
+              setCategoryStatus("neutral");
               form.clearErrors();
             }}
           >
@@ -307,9 +358,18 @@ export function TransactionForm({
               <Input
                 type="date"
                 className="w-[145px] sm:w-full px-2"
-                value={field.value ? new Date(field.value).toISOString().split("T")[0] : ""}
+                value={(() => {
+                  if (!field.value) return "";
+                  const d = new Date(field.value);
+                  const yyyy = d.getFullYear();
+                  const mm = String(d.getMonth() + 1).padStart(2, "0");
+                  const dd = String(d.getDate()).padStart(2, "0");
+                  return `${yyyy}-${mm}-${dd}`;
+                })()}
                 onChange={(e) => {
-                  const val = e.target.valueAsDate || new Date(e.target.value + "T12:00:00");
+                  if (!e.target.value) return;
+                  const [y, m, d] = e.target.value.split("-").map(Number);
+                  const val = new Date(y, m - 1, d, 12, 0, 0);
                   field.onChange(val);
                 }}
               />
@@ -320,6 +380,21 @@ export function TransactionForm({
           )}
         </div>
       </div>
+
+      {/* Descrição — posição superior (exceto bill_payment) */}
+      {selectedType !== "bill_payment" && (
+        <div className="grid gap-2">
+          <Label>Descrição</Label>
+          <Input
+            {...form.register("description")}
+            placeholder="Ex: Mercado, Salário, etc."
+            onBlur={(e) => handleDescriptionBlur(e.target.value)}
+          />
+          {form.formState.errors.description && (
+            <p className="text-xs text-red-500">{form.formState.errors.description.message}</p>
+          )}
+        </div>
+      )}
 
       {/* Linha 2: Conta e Cartão */}
       {(showAccount || showCard) && (
@@ -397,9 +472,12 @@ export function TransactionForm({
             <Label>Envelope</Label>
             <Select
               value={form.watch("envelopeId") ?? null}
-              onValueChange={(val) => form.setValue("envelopeId", val || undefined)}
+              onValueChange={(val) => {
+                form.setValue("envelopeId", val || undefined);
+                setEnvelopeStatus("manual");
+              }}
             >
-              <SelectTrigger>
+              <SelectTrigger className={envelopeSelectClass}>
                 <SelectValue placeholder="Selecione o envelope">
                   {envelopes?.find((e) => e.id === form.watch("envelopeId"))?.name}
                 </SelectValue>
@@ -426,11 +504,12 @@ export function TransactionForm({
             <Label>Categoria (Opcional)</Label>
             <Select
               value={form.watch("categoryId") ?? null}
-              onValueChange={(val) =>
-                form.setValue("categoryId", (val === "none" ? undefined : val) as string | undefined)
-              }
+              onValueChange={(val) => {
+                form.setValue("categoryId", (val === "none" ? undefined : val) as string | undefined);
+                setCategoryStatus("manual");
+              }}
             >
-              <SelectTrigger>
+              <SelectTrigger className={categorySelectClass}>
                 <SelectValue placeholder="Nenhuma categoria">
                   {categories?.find((c) => c.id === form.watch("categoryId"))?.name}
                 </SelectValue>
@@ -590,77 +669,79 @@ export function TransactionForm({
               </SelectContent>
             </Select>
           </div>
-        {form.formState.errors.referenceMonthYear && (
-          <p className="text-xs text-red-500">{form.formState.errors.referenceMonthYear.message}</p>
+          {form.formState.errors.referenceMonthYear && (
+            <p className="text-xs text-red-500">{form.formState.errors.referenceMonthYear.message}</p>
+          )}
+        </div>
+
+        {/* Mês da Fatura — apenas cartão */}
+        {(selectedType === "card_purchase" || selectedType === "bill_payment") && (
+          <div className="grid gap-2">
+            <Label>Mês da Fatura</Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedInvoiceMonthYear?.split("-")[1]}
+                onValueChange={(m) => {
+                  setMonthStatus("manual");
+                  form.setValue("invoiceMonthYear", `${selectedInvoiceMonthYear?.split("-")[0]}-${m}`);
+                }}
+              >
+                <SelectTrigger className={monthSelectClass}>
+                  <SelectValue placeholder="Mês" />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <SelectItem key={i + 1} value={String(i + 1).padStart(2, "0")}>
+                      {new Date(2000, i, 1).toLocaleString("pt-BR", { month: "long" })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedInvoiceMonthYear?.split("-")[0]}
+                onValueChange={(y) => {
+                  setMonthStatus("manual");
+                  form.setValue("invoiceMonthYear", `${y}-${selectedInvoiceMonthYear?.split("-")[1]}`);
+                }}
+              >
+                <SelectTrigger className={monthSelectClass}>
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                  {Array.from({ length: 7 }).map((_, i) => {
+                    const y = new Date().getFullYear() - 5 + i;
+                    return (
+                      <SelectItem key={y} value={y.toString()}>
+                        {y}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            {form.formState.errors.invoiceMonthYear && (
+              <p className="text-xs text-red-500">{form.formState.errors.invoiceMonthYear.message}</p>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Mês da Fatura — apenas cartão */}
-      {(selectedType === "card_purchase" || selectedType === "bill_payment") && (
+      {/* Descrição — posição inferior (apenas bill_payment, auto-preenchida) */}
+      {selectedType === "bill_payment" && (
         <div className="grid gap-2">
-          <Label>Mês da Fatura</Label>
-          <div className="flex gap-2">
-            <Select
-              value={selectedInvoiceMonthYear?.split("-")[1]}
-              onValueChange={(m) => {
-                setMonthStatus("manual");
-                form.setValue("invoiceMonthYear", `${selectedInvoiceMonthYear?.split("-")[0]}-${m}`);
-              }}
-            >
-              <SelectTrigger className={monthSelectClass}>
-                <SelectValue placeholder="Mês" />
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <SelectItem key={i + 1} value={String(i + 1).padStart(2, "0")}>
-                    {new Date(2000, i, 1).toLocaleString("pt-BR", { month: "long" })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={selectedInvoiceMonthYear?.split("-")[0]}
-              onValueChange={(y) => {
-                setMonthStatus("manual");
-                form.setValue("invoiceMonthYear", `${y}-${selectedInvoiceMonthYear?.split("-")[1]}`);
-              }}
-            >
-              <SelectTrigger className={monthSelectClass}>
-                <SelectValue placeholder="Ano" />
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                {Array.from({ length: 7 }).map((_, i) => {
-                  const y = new Date().getFullYear() - 5 + i;
-                  return (
-                    <SelectItem key={y} value={y.toString()}>
-                      {y}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          {form.formState.errors.invoiceMonthYear && (
-            <p className="text-xs text-red-500">{form.formState.errors.invoiceMonthYear.message}</p>
+          <Label>Descrição</Label>
+          <Input {...form.register("description")} placeholder="Ex: Mercado, Salário, etc." />
+          {form.formState.errors.description && (
+            <p className="text-xs text-red-500">{form.formState.errors.description.message}</p>
           )}
         </div>
       )}
-      </div>
-
-      {/* Linha 6: Descrição */}
-      <div className="grid gap-2">
-        <Label>Descrição</Label>
-        <Input {...form.register("description")} placeholder="Ex: Mercado, Salário, etc." />
-        {form.formState.errors.description && (
-          <p className="text-xs text-red-500">{form.formState.errors.description.message}</p>
-        )}
-      </div>
 
       {selectedType === "bill_payment" && billInfo?.alreadyPaid && (
         <Alert variant="destructive">
           <AlertTitle>Fatura já paga</AlertTitle>
           <AlertDescription>
-            Já existe um pagamento de fatura para este cartão neste mês. 
+            Já existe um pagamento de fatura para este cartão neste mês.
             Exclua o pagamento anterior para lançar um novo.
           </AlertDescription>
         </Alert>
@@ -675,9 +756,9 @@ export function TransactionForm({
         </Alert>
       )}
 
-      <Button 
-        type="submit" 
-        className="w-full" 
+      <Button
+        type="submit"
+        className="w-full"
         disabled={isSubmitting || ((selectedType === "bill_payment" || selectedType === "card_purchase") && billInfo?.alreadyPaid === true)}
       >
         {isSubmitting ? (

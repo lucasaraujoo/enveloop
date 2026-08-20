@@ -68,6 +68,8 @@ features/cards
 features/envelopes
 features/dashboard
 features/transactions
+features/categories
+features/goals
 
 Toda regra de negócio deverá ficar centralizada em Services ou Hooks.
 

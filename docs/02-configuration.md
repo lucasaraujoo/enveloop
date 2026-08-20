@@ -1,4 +1,6 @@
-# Etapa 2 — Configuração do Firebase
+# Etapa 2 - Configuração do Projeto
+
+## Configuração do Firebase
 
 Após aprovação da modelagem:
 
@@ -18,7 +20,7 @@ Aguarde aprovação.
 
 ---
 
-# Etapa 3 — Estrutura do projeto
+## Estrutura do projeto
 
 Implementar:
 

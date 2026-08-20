@@ -188,13 +188,13 @@ export function MonthGrid({
               ))}
             </div>
 
-            {/* Saídas row */}
+            {/* Despesas row */}
             <div
               className="grid py-2 border-b border-border/20"
               style={{ gridTemplateColumns: gridCols(months.length, isMobile) }}
             >
               <div className="max-md:relative md:sticky md:left-0 bg-card z-10 flex items-center px-2 sm:px-4">
-                <span className="text-xs font-medium text-foreground">Saídas</span>
+                <span className="text-xs font-medium text-foreground">Despesas</span>
               </div>
               {months.map((m) => {
                 const isOver = m.totalExpenses > m.totalIncome;
@@ -243,7 +243,7 @@ export function MonthGrid({
                         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
                         : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
                         }`}
-                      title="Transferir Saldo"
+                      title={m.saldo > 0 ? "Transferir saldo para outro mês" : "Trazer saldo de outro mês"}
                     >
                       {m.saldo > 0 ? (
                         <ArrowUpFromLine className="h-3.5 w-3.5" />
@@ -259,7 +259,7 @@ export function MonthGrid({
                       className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400 transition-opacity hover:opacity-80"
                       title="Transferir para Objetivo"
                     >
-                      + Objetivo
+                      <b>+</b>Objetivo
                       <Target className="h-3.5 w-3.5" />
                     </button>
                   )}
